@@ -1,5 +1,5 @@
 
-# OpenStack on AWS (Kolla-Ansible)
+# OpenStack (Kolla-Ansible)
 
 This project provisions an OpenStack environment using **Kolla-Ansible** on **AWS EC2 instances**, managed via **Terraform** and **Ansible**. It includes automated deployment, scaling, and validation tasks.
 
