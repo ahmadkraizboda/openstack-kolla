@@ -1,0 +1,27 @@
+- name: Install pip dependencies
+  pip:
+    name:
+      - ansible-core>=9.0.0,<10.0.0
+      - kolla-ansible==19.2.0
+    executable: pip3
+
+- name: Copy Kolla config
+  copy:
+    src: /usr/local/share/kolla-ansible/etc_examples/kolla
+    dest: /etc/kolla
+
+- name: Copy admin-openrc
+  copy:
+    src: /usr/local/share/kolla-ansible/etc_examples/admin-openrc.sh
+    dest: /etc/kolla/admin-openrc.sh
+
+- name: Check if passwords.yml exists
+  stat:
+    path: /etc/kolla/passwords.yml
+  register: passwords_file
+
+- name: Generate passwords
+  command: kolla-genpwd
+  args:
+    chdir: /etc/kolla
+  when: not passwords_file.stat.exists

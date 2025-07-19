@@ -1,0 +1,9 @@
+- name: Copy globals.yml
+  copy:
+    src: files/globals.yml
+    dest: /etc/kolla/globals.yml
+
+- name: Copy inventory
+  copy:
+    src: ../../generated_inventory.ini
+    dest: /etc/kolla/multinode

@@ -1,0 +1,40 @@
+#	Centralized log collection
+- name: Check that Fluentd container is running
+  shell: docker ps --format '{{.Names}}' | grep fluentd
+  register: fluentd_status
+  changed_when: false
+  failed_when: fluentd_status.rc != 0
+
+- name: Print Fluentd containers
+  debug:
+    var: fluentd_status.stdout_lines
+
+- name: Check if Nova logs exist
+  shell: ls /var/log/kolla/nova/
+  register: nova_logs
+  changed_when: false
+  failed_when: nova_logs.rc != 0
+
+- name: Check if Swift logs exist
+  shell: ls /var/log/kolla/swift/
+  register: swift_logs
+  changed_when: false
+  failed_when: swift_logs.rc != 0
+
+- name: Check if Trove logs exist
+  shell: ls /var/log/kolla/trove/
+  register: trove_logs
+  changed_when: false
+  failed_when: trove_logs.rc != 0
+
+- name: Show Nova logs
+  debug:
+    var: nova_logs.stdout_lines
+
+- name: Show Swift logs
+  debug:
+    var: swift_logs.stdout_lines
+
+- name: Show Trove logs
+  debug:
+    var: trove_logs.stdout_lines

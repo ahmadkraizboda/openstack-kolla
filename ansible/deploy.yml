@@ -1,0 +1,83 @@
+---
+- name: Prepare OpenStack nodes
+  hosts: all
+  become: true
+  roles:
+    - prepare_nodes
+
+- name: Prepare deployment node
+  hosts: localhost
+  become: true
+  roles:
+    - prepare_deployment_node
+
+- name: Configure Kolla-Ansible
+  hosts: localhost
+  become: true
+  roles:
+    - configure_kolla
+
+- name: Deploy OpenStack
+  hosts: localhost
+  become: true
+  roles:
+    - deploy_openstack
+
+- name: Configure OpenStack Networking
+  hosts: localhost
+  become: true
+  roles:
+    - network_config
+
+- name: Configure OpenStack security
+  hosts: localhost
+  become: false
+  roles:
+    - security_config
+
+- name: Validate monitoring and centralized logging
+  hosts: control
+  become: true
+  roles:
+    - monitoring_check
+
+- name: Deploy OpenStack Heat auto-scaling stack
+  hosts: localhost
+  become: false
+  roles:
+    - heat_autoscale
+
+- name: Scale Swift storage nodes dynamically
+  hosts: localhost
+  become: true
+  roles:
+    - scale_swift_by_usage
+
+- name: Validate OpenStack Services
+  hosts: localhost
+  become: true
+  roles:
+    - validation/validate_openstack
+
+- name: Validate Nova VM Creation & SSH
+  hosts: localhost
+  become: true
+  roles:
+    - role: validation/validate_nova
+      vars:
+        network_name: private
+        external_network: public
+        ssh_key_name: my-vm-key
+        private_key_path: ~/openstack_vm_key
+
+- name: Validate Swift Upload and Download
+  hosts: localhost
+  become: true
+  roles:
+    - validation/validate_swift
+
+- name: Validate OpenStack Trove
+  hosts: localhost
+  become: true
+  roles:
+    - validation/validate_trove

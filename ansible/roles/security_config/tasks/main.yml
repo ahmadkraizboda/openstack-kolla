@@ -1,0 +1,30 @@
+- name: Source OpenStack credentials
+  shell: "source /etc/kolla/admin-openrc.sh && env"
+  register: openrc_env
+
+- name: Create SSH keypair locally if not exists
+  openssh_keypair:
+    path: ~/.ssh/mykey
+    type: rsa
+    size: 2048
+  register: ssh_key
+
+- name: Upload public key to OpenStack as keypair
+  shell: |
+    source /etc/kolla/admin-openrc.sh && \
+    openstack keypair create --public-key ~/.ssh/mykey.pub mykey
+  args:
+    creates: ~/.ssh/mykey.pub
+  environment: "{{ dict(openrc_env.stdout_lines | map('split', '=') | map('list') | list) }}"
+
+- name: Create Keystone role 'support'
+  shell: |
+    source /etc/kolla/admin-openrc.sh && \
+    openstack role create support || true
+  environment: "{{ dict(openrc_env.stdout_lines | map('split', '=') | map('list') | list) }}"
+
+- name: Assign role to user 'demo' in project 'demo'
+  shell: |
+    source /etc/kolla/admin-openrc.sh && \
+    openstack role add --user demo --project demo support || true
+  environment: "{{ dict(openrc_env.stdout_lines | map('split', '=') | map('list') | list) }}"

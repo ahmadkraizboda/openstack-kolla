@@ -1,0 +1,58 @@
+- name: Get list of registered services
+  shell: openstack service list -f json
+  register: service_list
+  changed_when: false
+
+- name: Parse service types
+  set_fact:
+    found_services: "{{ service_list.stdout | from_json | map(attribute='Type') | list }}"
+
+- name: Define required OpenStack services
+  set_fact:
+    required_services:
+      - compute
+      - image
+      - identity
+      - network
+      - object-store
+      - volume
+      - database
+      - orchestration
+
+- name: Assert all required services are registered
+  assert:
+    that: "{{ item in found_services }}"
+    fail_msg: "Missing OpenStack service: {{ item }}"
+    success_msg: "Service {{ item }} is registered"
+  loop: "{{ required_services }}"
+
+- name: Get list of endpoints
+  shell: openstack endpoint list -f json
+  register: endpoint_list
+  changed_when: false
+
+- name: Extract endpoint URLs
+  set_fact:
+    public_endpoints: >-
+      {{ endpoint_list.stdout | from_json
+         | selectattr("Interface", "equalto", "public")
+         | map(attribute="URL") | list }}
+
+- name: Check if public endpoints are reachable
+  uri:
+    url: "{{ item }}"
+    method: GET
+    return_content: no
+    status_code: 200
+    timeout: 5
+    validate_certs: no
+  loop: "{{ public_endpoints }}"
+  register: endpoint_status
+  failed_when: item.status != 200
+  ignore_errors: yes
+
+- name: Print unreachable endpoints (if any)
+  debug:
+    msg: "Unreachable endpoint: {{ item.item }}"
+  loop: "{{ endpoint_status.results }}"
+  when: item.failed

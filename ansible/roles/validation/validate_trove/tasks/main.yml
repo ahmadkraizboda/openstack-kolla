@@ -1,0 +1,49 @@
+- name: Create test Trove DB instance
+  shell: >
+    openstack database instance create test-db-instance
+    --flavor m1.small
+    --size 5
+    --datastore mysql
+    --datastore-version 8.0
+    --nic net-id={{ trove_net_id }}
+    --volume-type lvm
+    --databases testdb
+    --users user1:password123
+    --security-groups default
+    --availability-zone nova
+    --wait
+  register: trove_create
+  failed_when: "'ERROR' in trove_create.stdout"
+
+- name: Get Trove instance IP
+  shell: openstack database instance show test-db-instance -f json
+  register: trove_info
+  changed_when: false
+
+- name: Set DB IP address
+  set_fact:
+    trove_ip: "{{ (trove_info.stdout | from_json).addresses | regex_search('(?:[0-9]{1,3}\.){3}[0-9]{1,3}') }}"
+
+- name: Wait for MySQL port to be available
+  wait_for:
+    host: "{{ trove_ip }}"
+    port: 3306
+    delay: 10
+    timeout: 180
+
+- name: Install MySQL client
+  apt:
+    name: mysql-client
+    state: present
+  become: true
+
+- name: Test database query
+  shell: |
+    mysql -h {{ trove_ip }} -u user1 -ppassword123 -e "SHOW DATABASES;"
+  register: mysql_output
+  changed_when: false
+  failed_when: "'testdb' not in mysql_output.stdout"
+
+- name: Display query success
+  debug:
+    msg: "Trove is working. Test DB created and query returned successfully."

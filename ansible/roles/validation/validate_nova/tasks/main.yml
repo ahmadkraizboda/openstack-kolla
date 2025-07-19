@@ -1,0 +1,37 @@
+- name: Launch test instance
+  shell: |
+    openstack server create test-ssh-vm \
+      --flavor m1.small \
+      --image cirros \
+      --nic net-id={{ network_name }} \
+      --key-name {{ ssh_key_name }} \
+      --security-group default \
+      --wait
+  register: vm_launch
+  failed_when: vm_launch.rc != 0
+
+- name: Get floating IP
+  shell: openstack floating ip create {{ external_network }} -f value -c floating_ip_address
+  register: floating_ip
+  changed_when: false
+
+- name: Assign floating IP to VM
+  shell: openstack server add floating ip test-ssh-vm {{ floating_ip.stdout }}
+
+- name: Wait for SSH port to open
+  wait_for:
+    host: "{{ floating_ip.stdout }}"
+    port: 22
+    delay: 10
+    timeout: 180
+
+- name: Try SSH access
+  shell: |
+    ssh -o StrictHostKeyChecking=no -i {{ private_key_path }} cirros@{{ floating_ip.stdout }} "hostname"
+  register: ssh_check
+  changed_when: false
+  failed_when: ssh_check.rc != 0
+
+- name: Print SSH result
+  debug:
+    msg: "SSH to test-ssh-vm was successful. Hostname: {{ ssh_check.stdout }}"

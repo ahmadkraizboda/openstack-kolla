@@ -1,0 +1,47 @@
+- name: Check if bootstrap has already run
+  stat:
+    path: /etc/kolla/.bootstrapped
+  register: bootstrap_flag
+
+- name: Bootstrap servers
+  command: kolla-ansible -i /etc/kolla/multinode bootstrap-servers
+  when: not bootstrap_flag.stat.exists
+
+- name: Mark bootstrap complete
+  file:
+    path: /etc/kolla/.bootstrapped
+    state: touch
+  when: not bootstrap_flag.stat.exists
+
+- name: Run prechecks
+  command: kolla-ansible -i /etc/kolla/multinode prechecks
+
+- name: Check if OpenStack is already deployed
+  stat:
+    path: /etc/kolla/.deployed
+  register: deployed_flag
+
+- block:
+    - name: Deploy OpenStack
+      command: kolla-ansible -i /etc/kolla/multinode deploy
+      register: deploy_result
+      failed_when: deploy_result.rc != 0
+
+    - name: Mark deployment complete
+      file:
+        path: /etc/kolla/.deployed
+        state: touch
+      when: deploy_result.rc == 0 and not deployed_flag.stat.exists
+
+    - name: Post-deploy
+      command: kolla-ansible post-deploy
+      when: deploy_result.rc == 0
+
+    - name: Reminder to source credentials
+      debug:
+        msg: "Run: source /etc/kolla/admin-openrc.sh"
+
+  rescue:
+    - name: Notify deployment failed
+      debug:
+        msg: "❌ Deployment failed. Run rollback or cleanup manually."

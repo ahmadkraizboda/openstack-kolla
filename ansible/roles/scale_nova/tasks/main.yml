@@ -1,0 +1,44 @@
+- name: Upload Heat environment file
+  copy:
+    src: environment.yaml
+    dest: /tmp/environment.yaml
+
+- name: Upload Heat server-group template
+  copy:
+    src: server-group.yaml
+    dest: /tmp/server-group.yaml
+
+- name: Upload Cirros instance template
+  copy:
+    src: cirros.yaml
+    dest: /tmp/cirros.yaml
+
+- name: Deploy Heat auto-scaling stack
+  shell: |
+    openstack stack create autoscaling-stack \
+      -t /tmp/server-group.yaml \
+      -e /tmp/environment.yaml
+  args:
+    creates: /tmp/stack_created.flag
+
+- name: Mark stack created
+  file:
+    path: /tmp/stack_created.flag
+    state: touch
+
+- name: Wait for stack to complete
+  shell: openstack stack show autoscaling-stack -f value -c stack_status
+  register: stack_status
+  retries: 10
+  delay: 15
+  until: stack_status.stdout == "CREATE_COMPLETE"
+  changed_when: false
+
+- name: Show stack resources
+  shell: openstack stack resource list autoscaling-stack
+  register: stack_resources
+  changed_when: false
+
+- name: Display resources
+  debug:
+    var: stack_resources.stdout_lines

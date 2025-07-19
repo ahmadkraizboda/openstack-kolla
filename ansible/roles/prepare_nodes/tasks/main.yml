@@ -1,0 +1,12 @@
+- name: Install system packages (Docker, etc.)
+  apt:
+    name:
+      - python3-pip
+      - python3-dev
+      - libffi-dev
+      - gcc
+      - libssl-dev
+      - docker.io
+      - git
+    state: present
+    update_cache: yes

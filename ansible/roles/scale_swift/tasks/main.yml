@@ -1,0 +1,54 @@
+---
+- name: Get disk usage on all Swift storage nodes
+  shell: df --output=pcent /var/lib/docker | tail -n 1 | tr -d ' %'
+  register: disk_usage
+  delegate_to: "{{ inventory_hostname }}"
+  run_once: false
+  changed_when: false
+  when: "'storage' in group_names"
+
+- name: Set fact if usage is above 80%
+  set_fact:
+    scale_required: true
+  when: disk_usage.stdout|int > 80
+
+- name: Print disk usage info
+  debug:
+    msg: "Disk usage on {{ inventory_hostname }} is {{ disk_usage.stdout }}%"
+  when: "'storage' in group_names"
+
+- name: Launch new Swift storage node (via Terraform)
+  shell: |
+    cd ../../terraform
+    terraform apply -auto-approve -target=aws_instance.storage[${NEW_INDEX}]
+  when: scale_required is defined and scale_required
+
+- name: Wait for SSH on new node
+  wait_for:
+    host: "{{ hostvars[inventory_hostname].ansible_host }}"
+    port: 22
+    delay: 10
+    timeout: 300
+  when: scale_required is defined and scale_required
+
+- name: Add new storage to generated inventory
+  lineinfile:
+    path: ../../generated_inventory.ini
+    line: "storage{{ NEW_INDEX+1 }} ansible_host={{ NEW_NODE_IP }}"
+    insertafter: "[storage]"
+  when: scale_required is defined and scale_required
+
+- name: Reconfigure Swift to include new storage node
+  shell: kolla-ansible -i /etc/kolla/multinode reconfigure -t swift
+  when: scale_required is defined and scale_required
+
+- name: Confirm ring rebalance
+  shell: docker exec kolla_toolbox swift-ring-builder /etc/kolla/config/swift/object.builder
+  register: swift_ring_check
+  changed_when: false
+  when: scale_required is defined and scale_required
+
+- name: Show updated Swift ring
+  debug:
+    var: swift_ring_check.stdout_lines
+  when: scale_required is defined and scale_required

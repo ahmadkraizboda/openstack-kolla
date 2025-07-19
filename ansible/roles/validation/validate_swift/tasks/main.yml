@@ -1,0 +1,29 @@
+- name: Create a Swift container
+  shell: openstack container create test-container -f value -c name
+  register: container_create
+  changed_when: "'test-container' in container_create.stdout"
+
+- name: Create test file
+  copy:
+    content: "This is a Swift test file."
+    dest: /tmp/swift-test.txt
+
+- name: Upload file to Swift
+  shell: openstack object create test-container /tmp/swift-test.txt -f value -c object
+  register: upload_result
+  changed_when: "'swift-test.txt' in upload_result.stdout"
+
+- name: Download file from Swift
+  shell: openstack object save test-container swift-test.txt --file /tmp/swift-test-downloaded.txt
+  register: download_result
+  changed_when: false
+
+- name: Compare original and downloaded files
+  command: diff /tmp/swift-test.txt /tmp/swift-test-downloaded.txt
+  register: diff_result
+  changed_when: false
+  failed_when: diff_result.rc != 0
+
+- name: Print success message
+  debug:
+    msg: "Swift upload/download test passed. Files match."
