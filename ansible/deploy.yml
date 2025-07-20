@@ -45,13 +45,13 @@
   hosts: localhost
   become: false
   roles:
-    - heat_autoscale
+    - scale_nova
 
 - name: Scale Swift storage nodes dynamically
   hosts: localhost
   become: true
   roles:
-    - scale_swift_by_usage
+    - scale_swift
 
 - name: Validate OpenStack Services
   hosts: localhost
