@@ -27,6 +27,16 @@ openstack-kolla/
         └── validation/
 ```
 
+### 📊 Ansible Playbook Visualization
+
+To better understand the structure and flow of tasks in the `deploy.yml` playbook, the following diagram (`deploy.svg`) has been automatically generated using [ansible-playbook-grapher](https://github.com/haidaraM/ansible-playbook-grapher).
+
+📎 [**Download Full Interactive Diagram (SVG)**](https://github.com/ahmadkraizboda/openstack-kolla/blob/main/deploy.svg)
+
+> ⚠️ **Note:** This diagram is interactive — you can **zoom**, **pan**, and **click on items** (tasks, roles, etc.) to explore the structure.
+> Due to browser limitations, it's **best viewed by downloading** the file and opening it in a modern desktop browser like **Chrome** or **Firefox**.
+
+
 ## 🚀 How to Deploy
 
 1. **Provision infrastructure with Terraform:**
